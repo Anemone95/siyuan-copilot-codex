@@ -178,6 +178,11 @@ export function runCodexExec(options: RunCodexExecOptions): RunCodexExecHandle {
     }
 
     const env: Record<string, string> = { ...(globalThis as any)?.process?.env };
+    // npm's Codex launcher uses /usr/bin/env node, even with an absolute CLI path.
+    const path = nodeRequire<typeof import('path')>('path');
+    if (path.isAbsolute(mcpNodeCmd)) {
+        env.PATH = [path.dirname(mcpNodeCmd), env.PATH].filter(Boolean).join(path.delimiter);
+    }
     if (options.siyuanApiUrl && options.siyuanApiUrl.trim()) {
         env.SIYUAN_API_URL = options.siyuanApiUrl.trim();
     }
