@@ -119,10 +119,12 @@ function buildRunModeArgs(runMode: CodexRunMode | undefined): string[] {
     if (mode === 'fully_open') {
         return ['--dangerously-bypass-approvals-and-sandbox'];
     }
-    if (mode === 'workspace_write') {
-        return ['--full-auto'];
-    }
-    return ['-s', 'read-only'];
+    // Non-interactive exec delegates approval requests to Codex's reviewer.
+    return [
+        '-s', mode === 'workspace_write' ? 'workspace-write' : 'read-only',
+        '-c', 'approval_policy="on-request"',
+        '-c', 'approvals_reviewer="auto_review"',
+    ];
 }
 
 function normalizeReasoningEffort(value: unknown): CodexReasoningEffort | '' {

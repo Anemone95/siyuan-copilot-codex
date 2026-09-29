@@ -128,8 +128,15 @@ async function main() {
     chmodSync(fakeChromePath, 0o755);
 
     let uploadCount = 0;
+    let remoteFailureCount = 0;
     const fakeAssetPath = '/assets/fallback-test.png';
     const server = http.createServer((req, res) => {
+        if (req.url === '/screenshot-provider-unavailable') {
+            remoteFailureCount += 1;
+            res.writeHead(404);
+            res.end('Screenshot provider unavailable in this test');
+            return;
+        }
         if (req.method === 'POST' && req.url === '/api/asset/upload') {
             uploadCount += 1;
             req.on('data', () => {});
@@ -158,7 +165,15 @@ async function main() {
         const port = await listen(server);
         const apiUrl = `http://127.0.0.1:${port}`;
 
-        child = spawn('node', ['mcp/siyuan-mcp/index.cjs'], {
+        // Force remote screenshot providers to fail locally so the fallback test is deterministic.
+        const remoteStubPath = path.join(tempRoot, 'remote-failure.cjs');
+        writeFileSync(remoteStubPath, `
+require('node:https').request = (_options, callback) => require('node:http').request({
+    hostname: '127.0.0.1', port: ${port}, path: '/screenshot-provider-unavailable'
+}, callback);
+`);
+
+        child = spawn(process.execPath, ['--require', remoteStubPath, 'mcp/siyuan-mcp/index.cjs'], {
             cwd: process.cwd(),
             env: {
                 ...process.env,
@@ -211,6 +226,7 @@ async function main() {
         assert.ok(payload && typeof payload === 'object', 'invalid screenshot payload');
         assert.equal(payload.ok, true, 'payload.ok must be true');
         assert.equal(payload.localFallbackUsed, true, 'local fallback should be used');
+        assert.equal(remoteFailureCount, 2, 'both remote screenshot providers should fail');
         assert.equal(String(payload?.asset?.assetPath || ''), fakeAssetPath, 'assetPath mismatch');
         assert.equal(String(payload?.asset?.captureProviderUrl || '').includes('local'), true);
         assert.equal(Array.isArray(payload?.warnings), true);

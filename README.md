@@ -1,10 +1,33 @@
 # SiYuan Copilot Codex
 
 > 个人自用 Codex 版插件（仅保留 Codex CLI 工作流）  
-> 仓库：<https://github.com/lk251066/siyuan-copilot-codex>  
+> 仓库：<https://github.com/Anemone95/siyuan-copilot-codex>
+>
+> Codex 版上游：<https://github.com/lk251066/siyuan-copilot-codex>
+>
 > 原项目：<https://github.com/Achuan-2/siyuan-plugin-copilot>
 
 ## 概览
+
+本 fork 适配 Codex CLI 0.158.0：通过当前沙箱参数和自动审批审核运行 Ask / Agent，沿用本机 Codex 的 ChatGPT 登录状态。
+
+## 自动构建
+
+每次推送 `master`，GitHub Actions 自动安装锁定依赖、运行全部回归测试、构建并校验插件安装包。Pull Request 也运行相同检查，支持在 Actions 页面手动触发。
+
+安装最新构建：打开 [Build plugin](https://github.com/Anemone95/siyuan-copilot-codex/actions/workflows/build.yml)，选择成功的 `master` 构建，下载 `siyuan-copilot-codex-<commit>` artifact。解压后得到 `package.zip` 和 `package.zip.sha256`；在思源集市中导入 `package.zip`。
+
+本地复现使用 Node.js 22：
+
+```bash
+npm ci
+npm test
+npm run build
+```
+
+构建包保留插件版本号，artifact 名称中的提交 SHA 标识对应源码。
+
+## 上游功能概览
 
 - 当前版本：`v1.6.37`（2026-02-16）
 - 仅支持 Codex CLI（`ask` / `agent`）
