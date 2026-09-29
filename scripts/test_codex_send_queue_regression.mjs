@@ -12,7 +12,7 @@ const checks = [
     },
     {
         name: 'queue enqueue helper exists',
-        pass: source.includes('function enqueueCurrentDraftForCodex()'),
+        pass: source.includes('function enqueueCurrentDraftForCodex(activeNoteFile: string | null)'),
     },
     {
         name: 'queue clear helper exists',
@@ -31,7 +31,7 @@ const checks = [
         pass:
             source.includes('if (isLoading) {') &&
             source.includes('if (!hasComposedPayloadForSend()) {') &&
-            source.includes('enqueueCurrentDraftForCodex();'),
+            source.includes('enqueueCurrentDraftForCodex(activeNoteFile);'),
     },
     {
         name: 'queue predicate depends on loading + payload only',

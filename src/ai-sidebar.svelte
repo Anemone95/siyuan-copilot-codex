@@ -63,6 +63,7 @@
     } from './codex/codex-runner';
     import { fetchCodexModels } from './codex/codex-models';
     import { buildWorkspaceSkillsPrompt } from './codex/workspace-skills';
+    import { getActiveNoteFile, formatActiveNoteFile } from './codex/active-note';
 
     export let plugin: any;
     export let initialMessage: string = ''; // 初始消息
@@ -107,6 +108,7 @@
         userContent: string;
         attachments: MessageAttachment[];
         contextDocuments: ContextDocument[];
+        activeNoteFile: string | null;
         queuedAt: number;
     }
 
@@ -4228,8 +4230,14 @@
         userContent: string;
         attachments?: MessageAttachment[];
         contextDocs: ContextDocument[];
+        activeNoteFile?: string | null;
     }): string {
         let prompt = params.userContent || '';
+
+        const activeNoteText = formatActiveNoteFile(params.activeNoteFile);
+        if (activeNoteText) {
+            prompt += `\n\n---\n\n${activeNoteText}`;
+        }
 
         const attachmentText = buildAttachmentTextForPrompt(params.attachments);
         if (attachmentText) {
@@ -4911,6 +4919,7 @@
         userContent: string;
         attachments?: MessageAttachment[];
         contextDocs: ContextDocument[];
+        activeNoteFile?: string | null;
     }) {
         const workingDir = String(settings.codexWorkingDir || '').trim();
         if (!workingDir) throw new Error('请在设置中填写 Codex 工作目录（Codex CLI -> 工作目录）');
@@ -5759,7 +5768,7 @@
         return { ...doc };
     }
 
-    function enqueueCurrentDraftForCodex(): boolean {
+    function enqueueCurrentDraftForCodex(activeNoteFile: string | null): boolean {
         const userContent = currentInput.trim();
         if (!userContent && currentAttachments.length === 0) return false;
         const nextIndex = queuedCodexSendDrafts.length + 1;
@@ -5768,6 +5777,7 @@
             userContent,
             attachments: currentAttachments.map(cloneAttachment),
             contextDocuments: contextDocuments.map(cloneContextDoc),
+            activeNoteFile,
             queuedAt: Date.now(),
         };
         queuedCodexSendDrafts = [...queuedCodexSendDrafts, draft];
@@ -5855,7 +5865,7 @@
                 currentAttachments = nextDraft.attachments.map(cloneAttachment);
                 contextDocuments = nextDraft.contextDocuments.map(cloneContextDoc);
                 await tick();
-                await sendMessage();
+                await sendMessage(nextDraft.activeNoteFile);
             }
         } finally {
             isProcessingQueuedCodexSend = false;
@@ -5882,7 +5892,7 @@
     }
 
     // 发送消息
-    async function sendMessage() {
+    async function sendMessage(activeNoteFile: string | null = getActiveNoteFile()) {
         if (isLoading) {
             if (!hasComposedPayloadForSend()) {
                 pushMsg(
@@ -5891,7 +5901,7 @@
                 );
                 return;
             }
-            enqueueCurrentDraftForCodex();
+            enqueueCurrentDraftForCodex(activeNoteFile);
             return;
         }
 
@@ -6130,6 +6140,7 @@
                     userContent,
                     attachments: userMessage.attachments,
                     contextDocs: contextDocumentsWithLatestContent,
+                    activeNoteFile,
                 });
             } catch (error) {
                 if (!isAborted) {
